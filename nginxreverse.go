@@ -13,37 +13,37 @@ type nginxReverseProxy struct {
 	template TemplateEngine
 }
 
-func (driver *nginxReverseProxy) path() string {
-	return "/etc/nginx/sites-available/" + driver.name
+func (n *nginxReverseProxy) path() string {
+	return "/etc/nginx/sites-available/" + n.name
 }
 
-func (driver *nginxReverseProxy) link() string {
-	return "/etc/nginx/sites-enabled/" + driver.name
+func (n *nginxReverseProxy) link() string {
+	return "/etc/nginx/sites-enabled/" + n.name
 }
 
-func (driver *nginxReverseProxy) Name(name string) ServerBlock {
-	driver.name = name
-	return driver
+func (n *nginxReverseProxy) Name(name string) ServerBlock {
+	n.name = name
+	return n
 }
 
-func (driver *nginxReverseProxy) Port(port string) ServerBlock {
-	driver.port = port
-	return driver
+func (n *nginxReverseProxy) Port(port string) ServerBlock {
+	n.port = port
+	return n
 }
 
-func (driver *nginxReverseProxy) Domains(domains ...string) ServerBlock {
-	driver.domains = append(driver.domains, domains...)
-	return driver
+func (n *nginxReverseProxy) Domains(domains ...string) ServerBlock {
+	n.domains = append(n.domains, domains...)
+	return n
 }
 
-func (driver *nginxReverseProxy) Template(engine TemplateEngine) ServerBlock {
-	driver.template = engine
-	return driver
+func (n *nginxReverseProxy) Template(engine TemplateEngine) ServerBlock {
+	n.template = engine
+	return n
 }
 
-func (driver *nginxReverseProxy) Disable() error {
+func (n *nginxReverseProxy) Disable() error {
 	// Delete link
-	err := os.Remove(driver.link())
+	err := os.Remove(n.link())
 	if os.IsNotExist(err) {
 		return nil
 	} else if err != nil {
@@ -54,9 +54,9 @@ func (driver *nginxReverseProxy) Disable() error {
 	return cmdError(exec.Command("sudo", "systemctl", "restart", "nginx").Run())
 }
 
-func (driver *nginxReverseProxy) Enable() error {
+func (n *nginxReverseProxy) Enable() error {
 	// Skip if exists
-	exists, err := fileExists(driver.link())
+	exists, err := fileExists(n.link())
 	if err != nil {
 		return err
 	} else if exists {
@@ -64,7 +64,7 @@ func (driver *nginxReverseProxy) Enable() error {
 	}
 
 	// Create link
-	err = os.Symlink(driver.path(), driver.link())
+	err = os.Symlink(n.path(), n.link())
 	if err != nil {
 		return err
 	}
@@ -73,17 +73,17 @@ func (driver *nginxReverseProxy) Enable() error {
 	return cmdError(exec.Command("sudo", "systemctl", "restart", "nginx").Run())
 }
 
-func (driver *nginxReverseProxy) Exists() (bool, error) {
-	return fileExists(driver.path())
+func (n *nginxReverseProxy) Exists() (bool, error) {
+	return fileExists(n.path())
 }
 
-func (driver *nginxReverseProxy) Enabled() (bool, error) {
-	available, err := fileExists(driver.path())
+func (n *nginxReverseProxy) Enabled() (bool, error) {
+	available, err := fileExists(n.path())
 	if err != nil {
 		return false, err
 	}
 
-	enabled, err := fileExists(driver.link())
+	enabled, err := fileExists(n.link())
 	if err != nil {
 		return false, err
 	}
@@ -91,9 +91,9 @@ func (driver *nginxReverseProxy) Enabled() (bool, error) {
 	return available && enabled, nil
 }
 
-func (driver *nginxReverseProxy) Install(override bool) (bool, error) {
+func (n *nginxReverseProxy) Install(override bool) (bool, error) {
 	// Check exists and override
-	exists, err := fileExists(driver.path())
+	exists, err := fileExists(n.path())
 	if err != nil {
 		return false, err
 	} else if exists && !override {
@@ -102,20 +102,20 @@ func (driver *nginxReverseProxy) Install(override bool) (bool, error) {
 
 	// Compile template
 	content := []byte(
-		driver.template.
-			AddParameter("port", driver.port).
-			AddParameter("domains", strings.Join(driver.domains, " ")).
+		n.template.
+			AddParameter("port", n.port).
+			AddParameter("domains", strings.Join(n.domains, " ")).
 			Compile(),
 	)
 
 	// Create server file
-	err = os.WriteFile(driver.path(), content, 0644)
+	err = os.WriteFile(n.path(), content, 0644)
 	if err != nil {
 		return false, err
 	}
 
 	// Create link and Skip if link exists
-	err = driver.Enable()
+	err = n.Enable()
 	if err != nil {
 		return false, err
 	}
@@ -129,15 +129,15 @@ func (driver *nginxReverseProxy) Install(override bool) (bool, error) {
 	return true, nil
 }
 
-func (driver *nginxReverseProxy) Uninstall() error {
+func (n *nginxReverseProxy) Uninstall() error {
 	// Remove the enabled site link
-	err := os.Remove(driver.link())
+	err := os.Remove(n.link())
 	if err != nil && !os.IsNotExist(err) {
 		return err
 	}
 
 	// Remove the available site file
-	err = os.Remove(driver.path())
+	err = os.Remove(n.path())
 	if err != nil && !os.IsNotExist(err) {
 		return err
 	}

@@ -13,58 +13,58 @@ type systemdDriver struct {
 	template TemplateEngine
 }
 
-func (driver systemdDriver) path() string {
-	return "/etc/systemd/system/" + driver.name + ".service"
+func (s systemdDriver) path() string {
+	return "/etc/systemd/system/" + s.name + ".service"
 }
 
-func (driver *systemdDriver) Name(name string) SystemdService {
-	driver.name = name
-	return driver
+func (s *systemdDriver) Name(name string) SystemdService {
+	s.name = name
+	return s
 }
 
-func (driver *systemdDriver) Root(dir string) SystemdService {
-	driver.root = dir
-	return driver
+func (s *systemdDriver) Root(dir string) SystemdService {
+	s.root = dir
+	return s
 }
 
-func (driver *systemdDriver) Command(command string) SystemdService {
-	driver.command = command
-	return driver
+func (s *systemdDriver) Command(command string) SystemdService {
+	s.command = command
+	return s
 }
 
-func (driver *systemdDriver) Template(engine TemplateEngine) SystemdService {
-	driver.template = engine
-	return driver
+func (s *systemdDriver) Template(engine TemplateEngine) SystemdService {
+	s.template = engine
+	return s
 }
 
-func (driver *systemdDriver) Exists() bool {
-	_, err := exec.Command("sudo", "systemctl", "status", driver.name).Output()
+func (s *systemdDriver) Exists() bool {
+	_, err := exec.Command("sudo", "systemctl", "status", s.name).Output()
 	return err == nil
 }
 
-func (driver *systemdDriver) Enabled() bool {
-	output, _ := exec.Command("sudo", "systemctl", "is-enabled", driver.name).Output()
+func (s *systemdDriver) Enabled() bool {
+	output, _ := exec.Command("sudo", "systemctl", "is-enabled", s.name).Output()
 	return strings.HasPrefix(string(output), "enabled")
 }
 
-func (driver *systemdDriver) Install(override bool) (bool, error) {
+func (s *systemdDriver) Install(override bool) (bool, error) {
 	// Check exists and override
-	exists := driver.Exists()
+	exists := s.Exists()
 	if exists && !override {
 		return false, nil
 	}
 
 	// Compile template
 	content := []byte(
-		driver.template.
-			AddParameter("name", driver.name).
-			AddParameter("root", driver.root).
-			AddParameter("command", driver.command).
+		s.template.
+			AddParameter("name", s.name).
+			AddParameter("root", s.root).
+			AddParameter("command", s.command).
 			Compile(),
 	)
 
 	// Create service file
-	err := os.WriteFile(driver.path(), []byte(content), 0644)
+	err := os.WriteFile(s.path(), []byte(content), 0644)
 	if err != nil {
 		return false, err
 	}
@@ -76,13 +76,13 @@ func (driver *systemdDriver) Install(override bool) (bool, error) {
 	}
 
 	// Enable service on startup
-	err = cmdError(exec.Command("sudo", "systemctl", "enable", driver.name).Run())
+	err = cmdError(exec.Command("sudo", "systemctl", "enable", s.name).Run())
 	if err != nil {
 		return false, err
 	}
 
 	// Start service
-	err = cmdError(exec.Command("sudo", "systemctl", "start", driver.name).Run())
+	err = cmdError(exec.Command("sudo", "systemctl", "start", s.name).Run())
 	if err != nil {
 		return false, err
 	}
@@ -90,22 +90,22 @@ func (driver *systemdDriver) Install(override bool) (bool, error) {
 	return true, nil
 }
 
-func (driver *systemdDriver) Uninstall() error {
-	if driver.Exists() {
+func (s *systemdDriver) Uninstall() error {
+	if s.Exists() {
 		// Stop service
-		err := cmdError(exec.Command("sudo", "systemctl", "stop", driver.name).Run())
+		err := cmdError(exec.Command("sudo", "systemctl", "stop", s.name).Run())
 		if err != nil {
 			return err
 		}
 
 		// Disable service
-		err = cmdError(exec.Command("sudo", "systemctl", "disable", driver.name).Run())
+		err = cmdError(exec.Command("sudo", "systemctl", "disable", s.name).Run())
 		if err != nil {
 			return err
 		}
 	}
 
-	err := os.Remove(driver.path())
+	err := os.Remove(s.path())
 	if err != nil && !os.IsNotExist(err) {
 		return err
 	}

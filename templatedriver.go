@@ -7,16 +7,16 @@ type templateEngine struct {
 	params   []string
 }
 
-func (engine *templateEngine) SetTemplate(template string) TemplateEngine {
-	engine.template = template
-	return engine
+func (t *templateEngine) SetTemplate(template string) TemplateEngine {
+	t.template = template
+	return t
 }
 
-func (engine *templateEngine) AddParameter(name, value string) TemplateEngine {
-	engine.params = append(engine.params, "{"+name+"}", value)
-	return engine
+func (t *templateEngine) AddParameter(name, value string) TemplateEngine {
+	t.params = append(t.params, "{"+name+"}", value)
+	return t
 }
 
-func (engine *templateEngine) Compile() string {
-	return strings.NewReplacer(engine.params...).Replace(engine.template)
+func (t *templateEngine) Compile() string {
+	return strings.NewReplacer(t.params...).Replace(t.template)
 }
